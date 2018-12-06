@@ -1,3 +1,4 @@
+import numpy as np
 import astropy.units as u
 from astropy.units.quantity_helper import converters_and_unit
 
@@ -35,8 +36,6 @@ class DaskQuantity:
         # and the unit of the result (or tuple of units for nout > 1).
         converters, unit = converters_and_unit(function, method, *inputs)
 
-        print(converters, unit, type(self.value))
-
         # Same for inputs, but here also convert if necessary.
         arrays = [(converter(input_.value) if converter else
                    getattr(input_, 'value', input_))
@@ -44,10 +43,7 @@ class DaskQuantity:
 
         # Call our superclass's __array_ufunc__
 
-        print(type(arrays[0]))
         result = self.value.__array_ufunc__(function, method, *arrays, **kwargs)
-
-        print(type(result))
 
         # If unit is None, a plain array is expected (e.g., comparisons), which
         # means we're done.
@@ -59,8 +55,26 @@ class DaskQuantity:
 
         return DaskQuantity(result, unit)
 
+    def to(self, unit):
+        return DaskQuantity(self.value * self.unit.to(unit), unit)
+
     def compute(self):
         return u.Quantity(self.value.compute(), self.unit)
 
     def __getitem__(self, item):
         return DaskQuantity(self.value[item], self.unit)
+
+    def __neg__(self):
+        return DaskQuantity(-self.value, self.unit)
+
+    def __add__(self, other):
+        return np.add(self, other)
+
+    def __radd__(self, other):
+        return np.add(other, self)
+
+    def __sub__(self, other):
+        return np.subtract(self, other)
+
+    def __rsub__(self, other):
+        return np.subtract(other, self)
